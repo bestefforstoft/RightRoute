@@ -1,3 +1,14 @@
+	======================================================
+	THIS IS ALL CHANGING I AM REMOVING MOST OF THE WORK
+	AND PUTTING IT ON THE USERS PHONE TO SEND THE LIST
+	OF DROP POINTS TO THE BUILT IN MAP APP WHATEVER 
+	IT MAY BE APPLE OR GOOGLE. 
+	THE USER WILL BE ABLE TO SAVE A LIST OF POINTS AND 
+	THE APP WILL REORDER THEM FOR THE BEST POSSIBLE ROUTE 
+	AND THEN SEND THEM TO THE MAP APP.
+	======================================================
+
+
 Instead of running heavy math on the phone, you can send your list of coordinates to a free online routing service. They look at actual OpenStreetMap road data and send you back the optimized order.Project OSRM (Open Source Routing Machine): An incredibly fast routing engine. You can send an API request to their "Trip" service, and it automatically reorganizes your coordinates into the shortest driving order.GraphHopper API: Another popular, developer-friendly routing engine that solves the Traveling Salesperson Problem using OpenStreetMap data.
 
 
