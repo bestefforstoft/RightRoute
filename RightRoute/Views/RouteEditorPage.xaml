@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage  xmlns:maui="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:d="http://schemas.microsoft.com/dotnet/2021/maui/design" xmlns:global="http://schemas.microsoft.com/dotnet/maui/global" xmlns="http://microsoft.com"
+             xmlns:x="http://microsoft.com"
+             xmlns:viewmodels="clr-namespace:RightRoute.ViewModels"
+             x:Class="RightRoute.Views.RouteEditorPage"
+             Title="{Binding CurrentRoute.Name}">
+
+    <!-- Vertical Stack holds the whole page layout scrolling naturally -->
+    <ScrollView Padding="20">
+        <VerticalStackLayout Spacing="15">
+
+            <!-- SECTION 1: Route Metadata Config -->
+            <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                <Label Text="Loadout Name:" VerticalOptions="Center" FontAttributes="Bold"/>
+                <Entry Text="{Binding CurrentRoute.Name}" WidthRequest="200" />
+            </HorizontalStackLayout>
+
+            <BoxView HeightRequest="1" Color="LightGray" />
+
+            <!-- SECTION 2: Add New Waypoint Form (Streamlined Address Search) -->
+            <Label Text="Where do you want to go?" FontSize="18" FontAttributes="Bold" />
+
+            <Grid ColumnDefinitions="*, 60" ColumnSpacing="10">
+
+                <!-- One big friendly input field for typing addresses -->
+                <Entry Grid.Column="0"
+					   Text="{Binding NewWaypointDescription}" 
+					   Placeholder="Type address here... (e.g., 123 Main St, Seattle)" 
+					   ReturnCommand="{Binding AddWaypointAsyncCommand}" />
+
+                <!-- Big click button to submit the line item -->
+                <Button Grid.Column="1" 
+						Text="+" 
+						FontAttributes="Bold"
+						FontSize="20"
+						Command="{Binding AddWaypointAsyncCommand}" 
+						BackgroundColor="DarkSlateBlue" 
+						TextColor="White"/>
+            </Grid>
+
+            <Label Text="(Optional: Leave input field blank and fill boxes below to input raw coordinates instead)" FontSize="11" Color="Gray" />
+
+            <Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="0,5,0,0">
+                <Entry Text="{Binding NewLatitude}" Placeholder="Manual Lat (Optional)" Keyboard="Numeric" FontSize="12"/>
+                <Entry Text="{Binding NewLongitude}" Placeholder="Manual Lng (Optional)" Keyboard="Numeric" FontSize="12"/>
+            </Grid>
+
+            <BoxView HeightRequest="1" Color="LightGray" />
+
+            <!-- SECTION 3: Strategy Options (Toggles) -->
+            <HorizontalStackLayout Spacing="15" VerticalOptions="Center">
+                <Label Text="Return to start at end of route?" VerticalOptions="Center" />
+                <Switch IsToggled="{Binding IsRoundTrip}" />
+            </HorizontalStackLayout>
+
+            <!-- SECTION 4: View Current Active List Slots -->
+            <Label Text="Stops In Current Loadout:" FontAttributes="Bold" FontSize="16" Margin="0,10,0,0"/>
+
+            <!-- ListView loops through added targets and provides individual item deletion -->
+            <CollectionView ItemsSource="{Binding Waypoints}" EmptyView="No stops added to this loadout yet.">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="Auto, *, Auto" Padding="5" VerticalOptions="Center">
+                            <!-- Sequential Ordering Index Indicator badge -->
+                            <Border Grid.Column="0" StrokeShape="RoundRectangle 4" BackgroundColor="LightBlue" WidthRequest="24" HeightRequest="24" Margin="0,0,10,0">
+                                <Label Text="{Binding SequenceOrder}" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" FontAttributes="Bold"/>
+                            </Border>
+
+                            <VerticalStackLayout Grid.Column="1">
+                                <Label Text="{Binding Description}" FontAttributes="Bold" />
+                                <Label Text="{Binding Latitude, StringFormat='Lat: {0}'}" FontSize="12" Color="Gray" />
+                                <d:Label Text="{maui:Binding Longitude, StringFormat='Lng: {0}'}" FontSize="12" Color="Gray" />
+                            </VerticalStackLayout>
+
+                            <!-- Swipe/Delete row target trigger button context -->
+                            <global:Button Grid.Column="2" 
+                                    Text="🗑" 
+                                    TextColor="Red"
+                                    BackgroundColor="Transparent"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RouteEditorViewModel}}, Path=RemoveWaypointCommand}"
+                                    CommandParameter="{Binding .}" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <BoxView HeightRequest="1" Color="LightGray" Margin="0,10,0,0" />
+
+            <!-- SECTION 5: Form Action Buttons -->
+            <Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="0,10,0,0">
+                <Button Grid.Column="0" 
+                        Text="Optimize Path" 
+                        Command="{Binding OptimizeRouteSequenceAsyncCommand}" 
+                        BackgroundColor="DarkSlateBlue" 
+                        TextColor="White" />
+
+                <Button Grid.Column="1" 
+                        Text="Save Loadout" 
+                        Command="{Binding SaveLoadoutCommand}" 
+                        BackgroundColor="Green" 
+                        TextColor="White" />
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

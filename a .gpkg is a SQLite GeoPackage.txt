@@ -1,0 +1,29 @@
+
+
+a .gpkg is a SQLite GeoPackage (so that extract from extract.bbbike is likely the DB you would have produced from the .osm.pbf). You can open it directly from your MAUI app.
+Suggested, minimal steps and code:
+1.	Inspect the file quickly (optional)
+•	Open C:...RainierValley.gpkg with "DB Browser for SQLite" or run sqlite3 to confirm tables (gpkg_contents, gpkg_geometry_columns).
+2.	Read metadata / list feature tables (C# + Microsoft.Data.Sqlite)
+•	Add NuGet: Microsoft.Data.Sqlite
+•	Example to list contents and feature table names:
+using Microsoft.Data.Sqlite; string path = @"C:\Users\s4tAnonymous\source\repos\Right Route\Right Route\Resources\Raw\RainierValley\localMap\RainierValley.gpkg"; using var conn = new SqliteConnection($"Data Source={path}"); conn.Open(); using var cmd = conn.CreateCommand(); cmd.CommandText = "SELECT table_name, data_type FROM gpkg_contents"; using var rdr = cmd.ExecuteReader(); while (rdr.Read()) { Console.WriteLine($"{rdr.GetString(0)}  - {rdr.GetString(1)}"); }
+3.	Read rows from a feature table
+•	Find the geometry column name from gpkg_geometry_columns, then SELECT * FROM "your_table" LIMIT 1; read attribute columns as usual. Geometry column is stored as BLOB.
+cmd.CommandText = "SELECT column_name FROM gpkg_geometry_columns WHERE table_name = @t"; cmd.Parameters.AddWithValue("@t", tableName);
+cmd.CommandText = $"SELECT * FROM "{tableName}" LIMIT 10"; using var r2 = cmd.ExecuteReader(); while (r2.Read()) { var id = r2["id"]; var geomBlob = r2["geom"] as byte[]; // replace "geom" with actual geometry column name // ... handle attributes }
+4.	Parsing geometry properly
+•	The geometry blob in a GeoPackage is not raw WKB; it has a GeoPackage binary header. For robust geometry parsing use a GeoPackage-aware library:
+•	Recommended: NetTopologySuite + GeoPackage support (or GDAL/OGR bindings).
+•	NuGet packages to try: dotnet add package NetTopologySuite dotnet add package NetTopologySuite.IO.GeoPackage
+•	Those libraries know the GeoPackage header and will give you NTS Geometry objects you can use for routing/geometry math.
+If you prefer to parse manually: you can extract the WKB payload from the blob and feed it to NetTopologySuite.IO.WKBReader — but that requires stripping the GeoPackage header (spec-defined) and is error-prone; prefer the GeoPackage reader.
+5.	Example using NetTopologySuite (conceptual)
+•	After adding NetTopologySuite + GeoPackage IO, use the GeoPackage reader API to iterate feature tables and get Geometry + attributes. (API details depend on the package version; the package handles header parsing so your code receives an NTS Geometry directly.)
+6.	Deployment notes for .NET MAUI
+•	The .gpkg is just a file. Include it in Resources/Raw (Build action: MauiAsset or CopyToOutput as you prefer) and use the correct runtime path when opening.
+•	If you use native GDAL/OGR bindings, be prepared to include native runtimes per platform. NetTopologySuite-based reader is pure managed and easier to use in MAUI.
+If you want, I can:
+•	give the exact code to read features with NetTopologySuite for your project (I can inspect the repo and add sample code),
+•	or implement a small GeoPackage reader helper in your OfflineRouteManager that enumerates tables and returns features.
+Which would you like me to do?
