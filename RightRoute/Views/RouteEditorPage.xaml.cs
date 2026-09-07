@@ -4,8 +4,9 @@ namespace RightRoute.Views;
 
 public partial class RouteEditorPage : ContentPage
 {
-	public RouteEditorPage()
+	public RouteEditorPage(RouteEditorViewModel viewModel)
 	{
-        BindingContext = new RouteEditorViewModel();
-    }
+		BindingContext = viewModel;
+		InitializeComponent();
+	}
 }

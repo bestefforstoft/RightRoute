@@ -13,12 +13,13 @@ namespace RightRoute.ViewModels
     {
         private readonly DatabaseService _dbService;
         private readonly OsrmService _osrmService;
+        private readonly NavigationService _navigationService;
 
-        public RouteEditorViewModel()
+        public RouteEditorViewModel(DatabaseService dbService, OsrmService osrmService, NavigationService navigationService)
         {
-            // For production, inject these via your AppShell MauiProgram dependency containers
-            _dbService = new DatabaseService();
-            _osrmService = new OsrmService();
+            _dbService = dbService;
+            _osrmService = osrmService;
+            _navigationService = navigationService;
 
             CurrentRoute = new RouteLoadout { Name = "New Loadout Route" };
             Waypoints = new ObservableCollection<RouteWaypoint>();
@@ -42,9 +43,46 @@ namespace RightRoute.ViewModels
         // Direct UI binding data source for editing list view structures
         public ObservableCollection<RouteWaypoint> Waypoints { get; }
 
+        /// <summary>
+        /// Requests location permission from the user if not already granted.
+        /// </summary>
+        private async Task<bool> RequestLocationPermissionAsync()
+        {
+            try
+            {
+                var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+
+                if (status == PermissionStatus.Granted)
+                {
+                    return true; // Permission already granted
+                }
+
+                if (status == PermissionStatus.Denied && DeviceInfo.Current.Platform == DevicePlatform.iOS)
+                {
+                    // On iOS, denied permissions cannot be re-requested; user must go to Settings
+                    await Shell.Current.DisplayAlertAsync(
+                        "Location Permission Denied",
+                        "Location access is required for geocoding addresses. Please enable it in Settings > Privacy > Location.",
+                        "OK"
+                    );
+                    return false;
+                }
+
+                // Request permission from user
+                status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+                return status == PermissionStatus.Granted;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Permission request error: {ex.Message}");
+                await Shell.Current.DisplayAlertAsync("Error", $"Could not request location permission: {ex.Message}", "OK");
+                return false;
+            }
+        }
+
         // Command: Add a waypoint manually to the current active array sandbox
         [RelayCommand]
-        private async Task AddWaypointAsync()
+        private async Task AddWaypoint()
         {
             // Safety check: ensure they actually typed something in the description box
             if (string.IsNullOrWhiteSpace(NewWaypointDescription))
@@ -67,6 +105,29 @@ namespace RightRoute.ViewModels
             {
                 try
                 {
+                    // Check if platform supports geocoding
+                    if (DeviceInfo.Current.Platform == DevicePlatform.WinUI)
+                    {
+                        // Windows doesn't have built-in geocoding support in MAUI
+                        await Shell.Current.DisplayAlertAsync(
+                            "Not Supported on Windows",
+                            "Automatic geocoding is not supported on Windows. Please enter coordinates manually in the Lat/Lng fields.",
+                            "OK"
+                        );
+                        return;
+                    }
+
+                    // Request permission before attempting geocoding
+                    if (!await RequestLocationPermissionAsync())
+                    {
+                        await Shell.Current.DisplayAlertAsync(
+                            "Permission Required",
+                            "Location permission is required for geocoding addresses.",
+                            "OK"
+                        );
+                        return;
+                    }
+
                     // Call the built-in phone system to translate text into map points
                     var locations = await Geocoding.Default.GetLocationsAsync(NewWaypointDescription);
                     var firstLocation = locations?.FirstOrDefault();
@@ -76,12 +137,31 @@ namespace RightRoute.ViewModels
                         lat = firstLocation.Latitude;
                         lng = firstLocation.Longitude;
                         locationFound = true;
+
+                        // Pre-fill the coordinate boxes so user can verify
+                        NewLatitude = lat.ToString("F6");
+                        NewLongitude = lng.ToString("F6");
                     }
+                }
+                catch (FeatureNotSupportedException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Geocoding not supported: {ex.Message}");
+                    await Shell.Current.DisplayAlertAsync(
+                        "Geocoding Not Available",
+                        "Geocoding is not supported on this platform. Please enter coordinates manually.",
+                        "OK"
+                    );
+                    return;
                 }
                 catch (Exception ex)
                 {
                     // Handles connection dropouts or system lookup errors gracefully
-                    await Shell.Current.DisplayAlertAsync($"ex Search Failed", "Could not find coordinates for that address. Check your connection.", "OK");
+                    System.Diagnostics.Debug.WriteLine($"Geocoding error: {ex.Message}");
+                    await Shell.Current.DisplayAlertAsync(
+                        "Search Failed",
+                        $"Could not find coordinates for that address. Check your internet connection and try again. Error: {ex.Message}",
+                        "OK"
+                    );
                     return;
                 }
             }
@@ -104,7 +184,11 @@ namespace RightRoute.ViewModels
             }
             else
             {
-                await Shell.Current.DisplayAlertAsync("Not Found", "Address not found. Try adding a city or zip code to the text.", "OK");
+                await Shell.Current.DisplayAlertAsync(
+                    "Not Found",
+                    "Address not found. Try adding a city or zip code to the text.",
+                    "OK"
+                );
             }
         }
 
@@ -120,28 +204,82 @@ namespace RightRoute.ViewModels
 
         // Command: Process OSRM API trip algorithm optimization over internal items
         [RelayCommand]
-        private async Task OptimizeRouteSequenceAsync()
+        private async Task OptimizeRouteSequence()
         {
-            if (Waypoints.Count < 2) return;
-
-            var inputList = Waypoints.ToList();
-            var sortedList = await _osrmService.OptimizeRouteAsync(inputList, IsRoundTrip);
-
-            Waypoints.Clear();
-            foreach (var wp in sortedList)
+            if (Waypoints.Count < 2)
             {
-                Waypoints.Add(wp);
+                await Shell.Current.DisplayAlertAsync("Not Enough Waypoints", "Add at least 2 stops to optimize the route.", "OK");
+                return;
+            }
+
+            try
+            {
+                var inputList = Waypoints.ToList();
+                var sortedList = await _osrmService.OptimizeRouteAsync(inputList, IsRoundTrip);
+
+                Waypoints.Clear();
+                foreach (var wp in sortedList)
+                {
+                    Waypoints.Add(wp);
+                }
+
+                await Shell.Current.DisplayAlertAsync("Success", "Route optimized successfully!", "OK");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Route optimization error: {ex.Message}");
+                await Shell.Current.DisplayAlertAsync("Optimization Failed", $"Could not optimize route: {ex.Message}", "OK");
             }
         }
 
         // Command: Save Current State configurations directly to SQLite tables
         [RelayCommand]
-        private async Task SaveLoadoutAsync()
+        private async Task SaveLoadout()
         {
-            if (string.IsNullOrWhiteSpace(CurrentRoute.Name)) return;
+            if (string.IsNullOrWhiteSpace(CurrentRoute.Name))
+            {
+                await Shell.Current.DisplayAlertAsync("Error", "Please enter a loadout name.", "OK");
+                return;
+            }
 
-            await _dbService.SaveRouteLoadoutAsync(CurrentRoute, Waypoints.ToList());
-            await Shell.Current.DisplayAlertAsync("Success", "Loadout saved successfully!", "OK");
+            if (Waypoints.Count == 0)
+            {
+                await Shell.Current.DisplayAlertAsync("Error", "Add at least one stop before saving.", "OK");
+                return;
+            }
+
+            try
+            {
+                await _dbService.SaveRouteLoadoutAsync(CurrentRoute, Waypoints.ToList());
+                await Shell.Current.DisplayAlertAsync("Success", "Loadout saved successfully!", "OK");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Database save error: {ex.Message}");
+                await Shell.Current.DisplayAlertAsync("Save Failed", $"Could not save loadout: {ex.Message}", "OK");
+            }
+        }
+
+        // Command: Launch native maps with the optimized route
+        [RelayCommand]
+        private async Task LaunchNativeMaps()
+        {
+            if (Waypoints.Count == 0)
+            {
+                await Shell.Current.DisplayAlertAsync("No Route", "Add stops and optimize the route before launching maps.", "OK");
+                return;
+            }
+
+            try
+            {
+                var waypointsList = Waypoints.OrderBy(w => w.SequenceOrder).ToList();
+                await _navigationService.LaunchNativeMapsAsync(waypointsList);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Launch maps error: {ex.Message}");
+                await Shell.Current.DisplayAlertAsync("Launch Error", $"Could not open native maps: {ex.Message}", "OK");
+            }
         }
 
         // Method to execute when navigating here to load an existing saved profile loadout
