@@ -1,3 +1,31 @@
+#####################
+FEATURE REQUESTS:
+	1. CHECK BOXES TO SELECT POTENTIAL STOPS
+		A. MAIN PAGE COULD SWITCH TO A PAGE WITH A LIST OF ALL KNOWN PAST STOPS 
+		WITH CHECK BOXES TO SELECT AND THEN ADD TO A NEW TEMP LIST FOR THE DAY\CURRENT ROUTE 
+		CAN ALSO ADD THIS TO SAVED LOADOUTS IF THE USER WANTS TO
+	2. FIGURE OUT HOW TO CREATE LOADOUTS THAT HAVE MORE THAN 9 STOPS AND WHEN OUR APP SENDS THE ENTIRE
+		LOADOUT IT AUTOMATICALLY WILL: 
+			i.   ACCEPT THE ENTIRE LIST
+			ii.  OPTIMIZE THE ENTIRE ROUTE
+			iii. BREAK UP THE LIST INTO THE PORTIONS PER MAPS LIMITS [9 STOPS] (HAVE A POP-UP TELLING THE USER THE APP IS PLOTTING THE FIRST 9 STOPS)
+			iv.  SEND EACH SEGMENT OF THE ROUTE AS NEEDED
+				A. AS THE MAPPING APP GETS TO ITS FINAL DESITNATION THAT HAS BEEN PLOTTED 
+					OUR APP WILL NEED TO KNOW TO SEND THE NEXT SET IN ORDER OF POINTS PLOTTED
+				B. THE APP WILL PING FOR LOCATION AND WHEN THE APP BELIEVES IT IS AT OR VERY NEAR THE FINAL PLOTTED POINT
+					OF THE SET OF 9 THE APP HAS SENT TO THE MAPPING APP OUR APP WILL POP UP A DIALOG ASKING THE USER FOR CONFIRMATION
+					THEY ARE THERE OR NOT, IF YES THE APP WILL AUTOMATICALLY SEND THE NEXT SET OF COORDINATES
+	3. 
+#####################
+++++++++++++++++++++++++++++++++++++++++++++++++++
+CHECK TO BE SURE GEOCODING ETC ARE TRULY 100% FREE
+++++++++++++++++++++++++++++++++++++++++++++++++++
+
+If you prefer a direct command, you can use the dotnet publish CLI tool straight from Visual Studio's built-in terminal. [1] (https://stackoverflow.com/questions/75378342/cant-build-net-maui-android-apk-or-aab-file-using-visual-studio-enterprise), [2] (https://stackoverflow.com/questions/77283547/maui-app-how-to-install-on-android-phone-with-apk-file)Go to the top menu and select View > Terminal.Run the following command (replace net8.0-android with your actual framework version, like net9.0-android if applicable): [1] (https://techcommunity.microsoft.com/discussions/app-dev/how-to-build-maui-to-apk/2997645), [2] (https://stackoverflow.com/questions/77283547/maui-app-how-to-install-on-android-phone-with-apk-file)bashdotnet publish -c Release -f net8.0-android -p:AndroidPackageFormats=apk
+Use code with caution.Finding your compiled APK file:After the build succeeds, navigate to your project directory using Windows File Explorer. You will find your generated APK file inside the following output subfolder:YOUR_PROJECT_FOLDER\bin\Release\net8.0-android\publish\
+
+#####################
+
 # RightRoute
 
 **RightRoute** is a cross-platform route planning and optimization application built with .NET MAUI. It allows users to create delivery routes, optimize the waypoint sequence using advanced algorithms, and launch native mapping applications to execute the optimized route.
